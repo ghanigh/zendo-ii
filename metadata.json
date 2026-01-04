@@ -1,0 +1,8 @@
+{
+  "name": "Zendo-II",
+  "description": "Premium on-demand home services marketplace. Instant matching with qualified artisans.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
