@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { SERVICES } from '../constants';
 import { Button } from '../components/Button';
-import { ArrowLeft, Camera, X, MapPin } from 'lucide-react';
+import { ArrowLeft, Camera, X, MapPin, ChevronRight, Info } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { ServiceType } from '../types';
+import { LiveMap } from '../components/LiveMap';
 
 export const RequestFlow: React.FC = () => {
   const { serviceId } = useParams();
@@ -13,24 +14,15 @@ export const RequestFlow: React.FC = () => {
   const { createIntervention } = useData();
   const service = SERVICES.find(s => s.id === serviceId);
   
-  // Get location data passed from ClientHome
   const locationState = location.state?.location;
-  
-  // Default fallback location if user didn't select anything
-  const finalLocation = locationState || { 
-    lat: 48.8566, 
-    lng: 2.3522, 
-    address: "12 Rue de la Paix, 75002 Paris" 
-  };
+  const finalLocation = locationState || { lat: 48.8566, lng: 2.3522, address: "Paris, France" };
 
   const [description, setDescription] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Mock handling file upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // Create fake object URL for preview
       const url = URL.createObjectURL(e.target.files[0]);
       setImages([...images, url]);
     }
@@ -41,17 +33,14 @@ export const RequestFlow: React.FC = () => {
     setIsSubmitting(true);
     
     try {
-      // Create actual data in our Context "Database"
       const interventionId = await createIntervention(
         serviceId as ServiceType,
         description,
-        finalLocation // Pass the real address object
+        finalLocation
       );
-      
-      // Navigate to Matching with the specific ID
       navigate('/matching', { state: { interventionId } });
     } catch (error) {
-      console.error("Failed to create request", error);
+      console.error("Failed", error);
       setIsSubmitting(false);
     }
   };
@@ -59,85 +48,103 @@ export const RequestFlow: React.FC = () => {
   if (!service) return <div>Service not found</div>;
 
   return (
-    <div className="min-h-screen bg-zendo-dark flex flex-col p-6">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-slate-800 transition-colors">
-          <ArrowLeft size={24} className="text-slate-300" />
+    <div className="h-screen bg-zendo-dark flex flex-col relative">
+      
+      {/* --- TOP MAP HEADER --- */}
+      <div className="h-[35%] w-full relative">
+        <LiveMap status="selecting" userLocation={finalLocation} />
+        
+        {/* Back Button */}
+        <button 
+          onClick={() => navigate(-1)} 
+          className="absolute top-4 left-4 z-50 w-10 h-10 bg-white rounded-full text-black flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+        >
+          <ArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-xl font-bold">{service.label}</h1>
-          <p className="text-xs text-slate-400">Nouvelle demande</p>
+
+        {/* Location Overlay Pill */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white text-black px-4 py-2 rounded-full shadow-xl flex items-center gap-2 max-w-[90%]">
+           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+           <span className="text-xs font-bold truncate">{finalLocation.address}</span>
         </div>
       </div>
 
-      {/* Form */}
-      <div className="flex-1 flex flex-col gap-6">
-        
-        {/* Location Recap */}
-        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex items-start gap-3">
-          <MapPin className="text-zendo-primary mt-1" size={18} />
-          <div>
-            <p className="text-xs text-slate-400 mb-1">Intervention à :</p>
-            <p className="text-sm font-semibold text-white line-clamp-2">{finalLocation.address}</p>
+      {/* --- BOTTOM FORM SHEET --- */}
+      <div className="flex-1 bg-zendo-dark rounded-t-3xl -mt-6 relative z-10 border-t border-white/10 flex flex-col shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div className="w-12 h-1 bg-slate-700 rounded-full mx-auto mt-3 mb-4"></div>
+
+        <div className="px-6 pb-6 flex-1 flex flex-col overflow-y-auto">
+          {/* Service Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br ${service.bgGradient}`}>
+               <service.icon size={24} className="text-white" />
+            </div>
+            <div>
+               <h1 className="text-xl font-bold text-white">{service.label}</h1>
+               <p className="text-xs text-slate-400">Intervention rapide • <span className="text-emerald-400">Arrivée 14:30</span></p>
+            </div>
+            <div className="ml-auto text-right">
+               <span className="block text-xl font-bold text-white">49€</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+             {/* Problem Description */}
+             <div className="bg-zendo-card border border-white/5 rounded-2xl p-4">
+                <label className="text-xs font-bold text-slate-500 uppercase mb-2 block tracking-wider">Détails du problème</label>
+                <textarea
+                  className="w-full bg-transparent border-none focus:outline-none text-white text-sm min-h-[80px] placeholder:text-slate-600 resize-none"
+                  placeholder="Ex: Le robinet de la cuisine fuit abondamment..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+             </div>
+
+             {/* Photos */}
+             <div>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  <label className="flex-shrink-0 w-20 h-20 rounded-xl bg-slate-800 border border-dashed border-slate-600 flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-slate-700 transition-colors">
+                    <Camera size={20} className="text-cyan-400" />
+                    <span className="text-[10px] text-slate-400">Photo</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                  </label>
+                  
+                  {images.map((img, idx) => (
+                    <div key={idx} className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-slate-700">
+                      <img src={img} alt="preview" className="w-full h-full object-cover" />
+                      <button 
+                        onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                        className="absolute top-0.5 right-0.5 bg-black/50 p-0.5 rounded-full text-white backdrop-blur-sm"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+             </div>
+             
+             {/* Price Info Box */}
+             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 flex items-start gap-3">
+                <Info size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-slate-300 leading-relaxed">
+                   Le montant de 49€ couvre le déplacement. Le devis final sera établi sur place avant travaux.
+                </p>
+             </div>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-300">Quel est le problème ?</label>
-          <textarea
-            className="w-full bg-zendo-card border border-slate-700 rounded-xl p-4 text-white focus:ring-2 focus:ring-cyan-500 focus:outline-none min-h-[120px]"
-            placeholder="Décrivez votre problème en détail..."
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+        {/* Footer Action */}
+        <div className="p-4 border-t border-white/10 bg-zendo-dark pb-safe">
+           <Button 
+             fullWidth 
+             onClick={handleRequest} 
+             disabled={description.length < 5}
+             isLoading={isSubmitting}
+             className="h-14 text-lg"
+           >
+             Confirmer la demande
+           </Button>
         </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-slate-300">Photos (Optionnel)</label>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            <label className="flex-shrink-0 w-24 h-24 rounded-xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-cyan-500 hover:text-cyan-500 transition-colors text-slate-500 bg-zendo-card">
-              <Camera size={24} />
-              <span className="text-xs font-medium">Ajouter</span>
-              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-            </label>
-            
-            {images.map((img, idx) => (
-              <div key={idx} className="relative flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border border-slate-700">
-                <img src={img} alt="preview" className="w-full h-full object-cover" />
-                <button 
-                  onClick={() => setImages(images.filter((_, i) => i !== idx))}
-                  className="absolute top-1 right-1 bg-black/50 p-1 rounded-full text-white backdrop-blur-sm"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 mt-auto mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-400">Frais de déplacement</span>
-            <span className="text-sm font-semibold">49.00 €</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-400">Estimation horaire</span>
-            <span className="text-sm font-semibold">~60-80 €/h</span>
-          </div>
-          <p className="text-[10px] text-slate-500 mt-3 italic">
-            * Le prix final sera confirmé par l'artisan sur place via un devis.
-          </p>
-        </div>
-
-        <Button 
-          fullWidth 
-          onClick={handleRequest} 
-          disabled={description.length < 5}
-          isLoading={isSubmitting}
-        >
-          Trouver un artisan
-        </Button>
       </div>
     </div>
   );

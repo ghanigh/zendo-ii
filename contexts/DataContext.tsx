@@ -60,6 +60,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createIntervention = async (serviceType: ServiceType, description: string, location: any): Promise<string> => {
     if (!user) throw new Error("Must be logged in");
 
+    // Ensure we have a valid location or use a default
+    const validLocation = location || { lat: 48.8566, lng: 2.3522, address: "Paris, France" };
+
     const newIntervention: Intervention = {
       id: `inv_${Date.now()}`,
       clientId: user.id,
@@ -67,7 +70,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description,
       photos: [],
       status: InterventionStatus.SEARCHING,
-      location: { ...location, address: "12 Rue de la Paix, Paris" }, // Mock address decoding
+      location: validLocation, 
       createdAt: new Date(),
     };
 
